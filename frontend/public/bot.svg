@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" aria-label="Иконка бота-помощника">
+  <!-- Green circular background -->
+  <circle cx="32" cy="32" r="30" fill="#4CAF50"/>
+  <!-- Headset band -->
+  <path d="M14 32a18 18 0 1 1 36 0" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <!-- Earcups -->
+  <circle cx="18" cy="32" r="6" fill="#FFFFFF"/>
+  <circle cx="46" cy="32" r="6" fill="#FFFFFF"/>
+  <!-- Face (white bust silhouette) -->
+  <circle cx="32" cy="28" r="9" fill="#FFFFFF"/>
+  <path d="M18 50c3-9 10-12 14-12s11 3 14 12" fill="#FFFFFF"/>
+  <!-- Mic boom -->
+  <path d="M46 36c0 4-3.5 7-7.5 7H35" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <!-- Tie for 'assistant' vibe -->
+  <path d="M30 40l2 4-2 6h4l-2-6 2-4z" fill="#4CAF50"/>
+</svg>

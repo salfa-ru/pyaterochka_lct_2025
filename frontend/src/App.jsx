@@ -1,9 +1,7 @@
-import "./App.css";
+import MessengerChat from "./components/MessengerChat/chat";
 
 function App() {
-  return (
-    <Chat/>
-  );
+  return <MessengerChat />;
 }
 
 export default App;
