@@ -5,21 +5,19 @@
 
 
 ### Быстрый запуск локально
-
+Необходимо загрузить файлы модели в папку best_saved_model (https://disk.yandex.ru/d/mhdoQMDXU4i-ZQ)
 ```sh
 python -m venv .venv
 source .venv/bin/activate  # или .venv\Scripts\activate на Windows
-pip install -r [requirements.txt](http://_vscodecontentref_/0)
+pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 ### Запуск в Docker
 Достаточно скопировать на VPS или локальную машину на linux docker-compose.yml и все необходимые данные подтянутся из DockerHub
+Контейнер teosvain/ner-x5 хранится по ссылку (https://hub.docker.com/repository/docker/teosvain/ner-x5/general)
 
 ```sh
 docker-compose -f docker-compose.yml up
-# или
-docker build -t ner-x5 .
-docker run -p 8000:8000 ner-x5
 ```
 
 ## API

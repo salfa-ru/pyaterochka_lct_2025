@@ -18,7 +18,7 @@ def load_model_and_tokenizer(model_dir='./best_saved_model'):
     model = model.to(device)
     return model, tokenizer, id2label
 
-model_path = './best_saved_model_0.9'
+model_path = './best_saved_model'
 model, tokenizer, id2label = load_model_and_tokenizer(model_path)
 
 def process_text(text: str):
