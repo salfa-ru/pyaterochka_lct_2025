@@ -1,0 +1,28 @@
+:root {
+  --body-bg: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --border: 1px solid #ddd;
+  --msger-bg: #fff;
+  --left-msg-bg: #e0e0e0;
+  --right-msg-bg: #4caf50;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: var(--body-bg);
+}
