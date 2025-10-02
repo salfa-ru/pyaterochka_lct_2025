@@ -6,7 +6,6 @@ from chat import get_chat_response
 from model import process_text
 from pydantic_models import SpanOut, PredictIn, ChatRequest
 
-
 app = FastAPI(title="NER Hackathon Stub (Async, rule-based)")
 
 CYRILLIC_RE = re.compile(r'^[А-Яа-яЁё]', re.UNICODE)
@@ -24,7 +23,6 @@ async def predict(payload: PredictIn) -> List[SpanOut]:
     if text == "":
         return []
     spans: List[SpanOut] = []
-    prev_type: str | None = None
     spans = process_text(text)
     return spans
 

@@ -1,19 +1,23 @@
+from model import process_text
 
-chat_pipeline = None
-
-def get_chat_model():
-    global chat_pipeline
-    if chat_pipeline is None:
-        #from transformers import pipeline
-        #chat_pipeline = pipeline()
-        pass
-    return chat_pipeline
 
 def get_chat_response(user_message: str, history: list[str] = None) -> str:
     if history is None:
         history = []
-    model = get_chat_model()
-    input_text = "\n".join(history + [f"User: {user_message}"])
-    #response = chat_pipeline(input_text)
-    #return response
-    return "Это заглушка ответа от чат-бота."
+    input_text = "\n".join(history + [f"{user_message}"])
+
+    response = process_text(input_text)
+    response_lines = []
+
+    for span in response:
+        category = span.entity.split('-')[-1].lower()
+        category_ru = {
+            "type": "категория",
+            "brand": "бренд",
+            "volume": "объем",
+            "percent": "процент"
+        }.get(category, category)
+
+        value = input_text[span.start_index:span.end_index]
+        response_lines.append(f"{category_ru} - {value}")
+    return response_lines
