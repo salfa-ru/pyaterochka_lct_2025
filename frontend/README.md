@@ -1,12 +1,54 @@
-# React + Vite
+React Food Bot Chat — Frontend (JS, Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Простой фронтенд чат-бота для выбора продуктов в доставке еды. На чистом React + Vite. Интерфейс в стиле msger chat UI (аватарки бота/пользователя, список сообщений, поле ввода).
+✅ Быстрый старт
 
-Currently, two official plugins are available:
+Установи Node.js 18+ (или 20+).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Установи зависимости:
 
-## Expanding the ESLint configuration
+npm i
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# или
+
+pnpm i
+
+Создай файл окружения и укажи адрес бэкенда (см. ниже).
+
+Запусти дев-сервер:
+
+npm run dev
+
+По умолчанию Vite стартует на http://localhost:5173.
+
+🔧 Конфигурация окружения
+
+Создай файл .env (или .env.local) в корне проекта:
+
+VITE_API_BASE_URL=http://localhost:8000
+VITE_CHAT_PATH=/chat
+VITE_TIMEOUT_MS=20000
+
+VITE_API_BASE_URL — базовый URL бэкенда. Мы отлаживали на :8000.
+
+VITE_CHAT_PATH — путь эндпоинта (у нас был /chat).
+
+VITE_TIMEOUT_MS — таймаут запроса в миллисекундах.
+
+📁 Структура (минимальная)
+project/
+├─ public/
+│ ├─ bot.png
+│ └─ user.png
+├─ src/
+│ ├─ api/
+│ │ └─ chat.js # fetch-клиент
+│ ├─ components/
+│ │ └─ Chat.js # основная логика чата (без TS)
+│ ├─ styles/
+│ │ └─ msger.css # стили msger UI
+│ ├─ App.js
+│ └─ main.jsx
+├─ index.html
+├─ package.json
+└─ README.md
