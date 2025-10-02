@@ -57,7 +57,7 @@ export default function MessengerChat({
     ]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const msgText = input.trim();
     if (!msgText) return;
@@ -66,8 +66,8 @@ export default function MessengerChat({
     appendMessage(PERSON_NAME, PERSON_IMG, "right", msgText);
     setInput("");
 
-    // ответ бота (мок)
     if (mock) {
+      // ответ бота (мок)
       const r = Math.floor(Math.random() * BOT_MSGS.length);
       const reply = BOT_MSGS[r];
       const delay = Math.max(300, reply.split(" ").length * 100);
@@ -75,11 +75,51 @@ export default function MessengerChat({
         appendMessage(BOT_NAME, BOT_IMG, "left", reply);
       }, delay);
     } else {
-      // TODO: интеграция с реальным бекендом /api/food-bot
-      // fetch("/api/food-bot", { ... })
-      //   .then(res => res.json())
-      //   .then(data => appendMessage(BOT_NAME, BOT_IMG, "left", data.reply))
-      //   .catch(() => appendMessage(BOT_NAME, BOT_IMG, "left", "Упс, произошла ошибка"));
+      // реальный запрос на бэкенд
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: msgText,
+            sessionId: "session-1", // можно сделать динамическим
+          }),
+        });
+
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) {
+          const text = await res.text();
+          appendMessage(
+            BOT_NAME,
+            BOT_IMG,
+            "left",
+            `Ожидался JSON, но пришло: ${ct} → ${text.slice(0, 100)}`
+          );
+          return;
+        }
+
+        const data = await res.json();
+
+        if (Array.isArray(data?.messages)) {
+          data.messages.forEach((m) =>
+            appendMessage(BOT_NAME, BOT_IMG, "left", m.text)
+          );
+        } else if (data?.role && data?.text) {
+          appendMessage(BOT_NAME, BOT_IMG, "left", data.text);
+        } else if (typeof data === "string") {
+          appendMessage(BOT_NAME, BOT_IMG, "left", data);
+        } else {
+          appendMessage(BOT_NAME, BOT_IMG, "left", "Неожиданный ответ сервера");
+        }
+      } catch (err) {
+        console.error("fetch error:", err);
+        appendMessage(
+          BOT_NAME,
+          BOT_IMG,
+          "left",
+          "Ошибка соединения с сервером"
+        );
+      }
     }
   };
 
@@ -114,7 +154,6 @@ export default function MessengerChat({
                 <div className="msg-info-name">{m.name}</div>
                 <div className="msg-info-time">
                   <span>{m.time}</span>
-                  {/* Плашка с TZ и разницей с МСК */}
                   <TimeZone compact />
                 </div>
               </div>
