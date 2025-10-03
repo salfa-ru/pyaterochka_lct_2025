@@ -1,5 +1,4 @@
-import React from "react";
-import "./timezone.css";
+import "./TimeZone.css";
 
 const pad2 = (n) => String(n).padStart(2, "0");
 

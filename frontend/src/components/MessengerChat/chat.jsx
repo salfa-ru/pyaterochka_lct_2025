@@ -7,7 +7,6 @@ const PERSON_IMG = "./user.svg";
 const BOT_NAME = "БOT";
 const PERSON_NAME = "Пользователь";
 
-// --- Утилиты времени
 const pad2 = (n) => String(n).padStart(2, "0");
 const nowHHMM = () => {
   const d = new Date();
@@ -15,19 +14,48 @@ const nowHHMM = () => {
 };
 const uid = () => Math.random().toString(36).slice(2);
 
-// Демо-ротация ответов (мок)
-const BOT_MSGS = [
-  "Здравствуйте! Чем я могу помочь?",
-  "Понимаю. Могу подобрать варианты по бюджету и предпочтениям.",
-  "Могу предложить фильтры: вегетарианское, без глютена, острое, детское меню.",
-  "Если подскажете город, покажу, что доступно для доставки рядом.",
-  "Добавить что-то в корзину?",
-];
+// Составляем ключ товара для дедупликации
+function productKey(p) {
+  if (!p || typeof p !== "object") return "";
+  if (p.id) return String(p.id);
+  const name = (p.name || p.title || p.product_name || "").trim().toLowerCase();
+  const brand = (p.brand || p.manufacturer || "").trim().toLowerCase();
+  const fat = (p.fat || p.fatness || p.fat_content || "").trim().toLowerCase();
+  const volume = (p.volume || p.size || p.package || "").trim().toLowerCase();
+  return [name, brand, fat, volume].filter(Boolean).join("|");
+}
+
+function productToText(p) {
+  if (!p || typeof p !== "object") return "";
+  const name = p.name || p.title || p.product_name || "Товар";
+  const brand = p.brand || p.manufacturer || "";
+  const fat = p.fat || p.fatness || p.fat_content || "";
+  const volume = p.volume || p.size || p.package || "";
+  const price = p.price != null ? `${p.price} ${p.currency || "₽"}` : "";
+  const desc = p.description || p.short_description || "";
+
+  return [
+    `• ${name}${brand ? `, ${brand}` : ""}`,
+    fat ? `Жирность: ${fat}` : "",
+    volume ? `Объём/вес: ${volume}` : "",
+    price ? `Цена: ${price}` : "",
+    desc ? `Описание: ${desc}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function extractProducts(data) {
+  if (!data) return [];
+  if (Array.isArray(data.products)) return data.products;
+  if (data.product && typeof data.product === "object") return [data.product];
+  return [];
+}
 
 export default function MessengerChat({
   headerTitle = "Ваш персональный помощник",
   logoSrc = "/logo.svg",
-  mock = true,
+  mock = false,
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState(() => [
@@ -37,93 +65,193 @@ export default function MessengerChat({
       name: BOT_NAME,
       img: BOT_IMG,
       time: nowHHMM(),
-      text: "Здравствуйте! Я помогу Вам выбрать необходимые продукты. Пожалуйста, введите название продукта, марку, объем или любые другие данные, которые вы знаете",
+      text:
+        "Здравствуйте! Я помогу Вам выбрать необходимые продукты.\n" +
+        "Напишите, например: «молоко 2.5% 1 л Простоквашино».",
     },
   ]);
 
+  // набор уже показанных товаров (ключи)
+  const [seenProducts, setSeenProducts] = useState(() => new Set());
   const chatRef = useRef(null);
 
-  // автоскролл вниз при добавлении сообщений
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [messages.length]);
 
-  const appendMessage = (name, img, side, text) => {
+  const appendMessage = (name, img, side, text, { dedupeBot = true } = {}) => {
+    // если это бот и нужно избегать повтора — сравним с последним бот-сообщением
+    if (dedupeBot && side === "left") {
+      const lastBot = [...messages].reverse().find((m) => m.side === "left");
+      if (lastBot && lastBot.text.trim() === String(text).trim()) {
+        return; // не добавляем полностью одинаковый ответ
+      }
+    }
     setMessages((prev) => [
       ...prev,
       { id: uid(), side, name, img, time: nowHHMM(), text },
     ]);
   };
 
+  const buildUserHistory = () =>
+    messages.filter((m) => m.side === "right").map((m) => m.text);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const msgText = input.trim();
     if (!msgText) return;
 
-    // сообщение пользователя
-    appendMessage(PERSON_NAME, PERSON_IMG, "right", msgText);
+    appendMessage(PERSON_NAME, PERSON_IMG, "right", msgText, {
+      dedupeBot: false,
+    });
     setInput("");
 
     if (mock) {
-      // ответ бота (мок)
-      const r = Math.floor(Math.random() * BOT_MSGS.length);
-      const reply = BOT_MSGS[r];
-      const delay = Math.max(300, reply.split(" ").length * 100);
-      setTimeout(() => {
-        appendMessage(BOT_NAME, BOT_IMG, "left", reply);
-      }, delay);
-    } else {
-      // реальный запрос на бэкенд
+      appendMessage(BOT_NAME, BOT_IMG, "left", "Мок-режим: mock=true");
+      return;
+    }
+
+    try {
+      const history = buildUserHistory();
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msgText, history }),
+      });
+
+      const status = res.status;
+      const ct = (res.headers.get("content-type") || "").toLowerCase();
+      const raw = await res.text();
+
+      let data = null;
       try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: msgText,
-            sessionId: "session-1", // можно сделать динамическим
-          }),
-        });
+        data = JSON.parse(raw);
+      } catch {
+        data = null;
+      }
 
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          const text = await res.text();
-          appendMessage(
-            BOT_NAME,
-            BOT_IMG,
-            "left",
-            `Ожидался JSON, но пришло: ${ct} → ${text.slice(0, 100)}`
-          );
-          return;
-        }
-
-        const data = await res.json();
-
-        if (Array.isArray(data?.messages)) {
-          data.messages.forEach((m) =>
-            appendMessage(BOT_NAME, BOT_IMG, "left", m.text)
-          );
-        } else if (data?.role && data?.text) {
-          appendMessage(BOT_NAME, BOT_IMG, "left", data.text);
-        } else if (typeof data === "string") {
-          appendMessage(BOT_NAME, BOT_IMG, "left", data);
-        } else {
-          appendMessage(BOT_NAME, BOT_IMG, "left", "Неожиданный ответ сервера");
-        }
-      } catch (err) {
-        console.error("fetch error:", err);
+      if (!res.ok) {
         appendMessage(
           BOT_NAME,
           BOT_IMG,
           "left",
-          "Ошибка соединения с сервером"
+          `Ошибка сервера: ${status}\nContent-Type: ${ct}\n${raw.slice(0, 200)}`
         );
+        return;
       }
+
+      // === 1) Если пришли товары — покажем только НОВЫЕ
+      const products = extractProducts(data);
+      if (products.length) {
+        const newOnes = [];
+        const newKeys = new Set(seenProducts);
+
+        for (const p of products) {
+          const key = productKey(p);
+          if (!key) continue;
+          if (!newKeys.has(key)) {
+            newKeys.add(key);
+            newOnes.push(p);
+          }
+        }
+
+        if (newOnes.length) {
+          const formatted = newOnes
+            .map((p) => productToText(p))
+            .filter(Boolean)
+            .join("\n\n");
+          if (formatted) {
+            appendMessage(BOT_NAME, BOT_IMG, "left", formatted);
+            setSeenProducts(newKeys); // запоминаем показанные товары
+            return;
+          }
+        }
+        // Если все товары уже были — не дублируем ответ
+        // но, чтобы пользователь видел, что запрос обработан, можно дать мягкий намёк (или просто ничего не добавлять)
+        // appendMessage(BOT_NAME, BOT_IMG, "left", "Похоже, это мы уже показывали.");
+        return;
+      }
+
+      // === 2) Массив строк (атрибуты) или текст — с защитой от повтора
+      // 2.1 JSON-массив строк
+      if (Array.isArray(data)) {
+        const text = data
+          .filter((s) => typeof s === "string" && s.trim())
+          .map((s) => `• ${s}`)
+          .join("\n");
+        if (text) {
+          appendMessage(
+            BOT_NAME,
+            BOT_IMG,
+            "left",
+            `Нашла параметры запроса:\n${text}`
+          );
+        }
+        return;
+      }
+
+      // 2.2 объект с массивом строк под разными ключами
+      if (data && typeof data === "object") {
+        const lines =
+          data.attributes || data.response_lines || data.data || data.result;
+
+        if (Array.isArray(lines)) {
+          const text = lines
+            .filter((s) => typeof s === "string" && s.trim())
+            .map((s) => `• ${s}`)
+            .join("\n");
+          if (text) {
+            appendMessage(
+              BOT_NAME,
+              BOT_IMG,
+              "left",
+              `Нашла параметры запроса:\n${text}`
+            );
+          }
+          return;
+        }
+      }
+
+      // 2.3 raw-текст
+      if (typeof raw === "string" && raw.trim()) {
+        const maybeLines = raw
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (
+          maybeLines.length >= 2 &&
+          maybeLines.some((s) => s.includes(" - "))
+        ) {
+          const text = maybeLines.map((s) => `• ${s}`).join("\n");
+          appendMessage(
+            BOT_NAME,
+            BOT_IMG,
+            "left",
+            `Нашла параметры запроса:\n${text}`
+          );
+          return;
+        }
+        appendMessage(BOT_NAME, BOT_IMG, "left", raw.slice(0, 400));
+        return;
+      }
+
+      // === 3) Неизвестный формат
+      appendMessage(
+        BOT_NAME,
+        BOT_IMG,
+        "left",
+        `Неожиданный ответ сервера (не распознан формат)\n` +
+          `Status: ${status}\nContent-Type: ${ct}\n` +
+          `${raw.slice(0, 200)}`
+      );
+    } catch (err) {
+      console.error("fetch error:", err);
+      appendMessage(BOT_NAME, BOT_IMG, "left", "Ошибка соединения с сервером");
     }
   };
 
-  // инлайн-зелёный (тот же, что у бота). Оставляем класс для общих стилей.
   const sendBtnStyle = { backgroundColor: "#4CAF50" };
 
   return (
@@ -147,8 +275,7 @@ export default function MessengerChat({
             <div
               className="msg-img"
               style={{ backgroundImage: `url(${m.img})` }}
-            ></div>
-
+            />
             <div className="msg-bubble">
               <div className="msg-info">
                 <div className="msg-info-name">{m.name}</div>
@@ -157,8 +284,9 @@ export default function MessengerChat({
                   <TimeZone compact />
                 </div>
               </div>
-
-              <div className="msg-text">{m.text}</div>
+              <div className="msg-text" style={{ whiteSpace: "pre-wrap" }}>
+                {m.text}
+              </div>
             </div>
           </div>
         ))}
@@ -168,7 +296,7 @@ export default function MessengerChat({
         <input
           type="text"
           className="msger-input"
-          placeholder="Введите сообщение…"
+          placeholder='Напишите, например: "молоко 2.5% 1 л Простоквашино"'
           value={input}
           onChange={(e) => setInput(e.target.value)}
           aria-label="Message"
