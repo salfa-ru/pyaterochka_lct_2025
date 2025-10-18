@@ -1,11 +1,14 @@
 # Pyaterochka NER (NER Hackathon Stub)
 
-Лёгкий сервис распознавания сущностей (NER) на базе Hugging Face Transformers + FastAPI. Проект включает модель в каталоге `best_saved_model_0.9`, API для предсказаний и простой чат-обёртку.
+Лёгкий сервис распознавания сущностей (NER) на базе Hugging Face Transformers + FastAPI. Проект автоматически поднимает модель из локальной папки best_saved_model или из репозитория Hugging Face Model Hub.
 Код автоматически определяет наличие CUDA‑совместимого GPU и использует его при наличии; иначе выполняется на CPU.
 
 
 ### Быстрый запуск локально
-Необходимо загрузить файлы модели в папку best_saved_model (https://disk.yandex.ru/d/mhdoQMDXU4i-ZQ)
+
+Скрипт в первую очередь пытается загрузить модель из локальной папки best_saved_model. Если папка отсутствует или модель не может быть загружена, скрипт попытается загрузить модель из репозитория Hugging Face Model Hub по указанному пути.
+Ссылка на модель в Hugging Face Model Hub: https://huggingface.co/Reg789/Bert_NER_Piaterochka_2025
+
 ```sh
 python -m venv .venv
 source .venv/bin/activate  # или .venv\Scripts\activate на Windows
@@ -26,7 +29,7 @@ docker-compose -f docker-compose.yml up
 - POST /api/predict — payload: { "input": "текст" }, возвращает список объектов SpanOut с полями start_index, end_index, entity
 - POST /chat — payload: { "message": "...", "history": ["..."] }, возвращает {"response": [...]}
 
-Модель загружается из best_saved_model в load_model_and_tokenizer.
+Модель загружается из best_saved_model в функции load_model_and_tokenizer.
 Файлы модели хранятся в папке best_saved_model, структура необходимых файлов:
 - config.json
 - label_map.json
@@ -34,6 +37,18 @@ docker-compose -f docker-compose.yml up
 - special_tokens_map.json
 - tokenizer_config.json
 - tokenizer.json
+
+## Пути к моделям
+Пути к моделям задаются в файле app.py. При необходимости их можно изменить:
+```bash
+LOCAL_MODEL_DIR = './best_saved_model'
+HF_MODEL_PATH = 'Reg789/Bert_NER_Piaterochka_2025'
+```
+
+## Настройки FastAPI приложения:
+- Название приложения: "NER Hackathon Stub (Async, rule-based)"
+- Разрешённые источники (CORS): origins
+При необходимости можно изменить название приложения и список разрешённых источников в app.py
 
 ## Внешние источники данных и предобученные модели
 ### Использованные предобученные модели
