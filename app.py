@@ -2,8 +2,11 @@ import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-from chat import get_chat_response
 
+LOCAL_MODEL_DIR = './best_saved_model'
+HF_MODEL_PATH = 'Reg789/Bert_NER_Piaterochka_2025'
+
+from chat import get_chat_response
 from model import process_text
 from pydantic_models import SpanOut, PredictIn, ChatRequest
 
@@ -31,9 +34,6 @@ CYRILLIC_RE = re.compile(r'^[А-Яа-яЁё]', re.UNICODE)
 LATIN_RE = re.compile(r'^[A-Za-z]')
 DIGIT_RE = re.compile(r'^\d')
 TOKEN_RE = re.compile(r'\S+')
-
-LOCAL_MODEL_DIR = './best_saved_model'
-HF_MODEL_PATH = 'Reg789/Bert_NER_Piaterochka_2025'
 
 # API Endpoints
 
